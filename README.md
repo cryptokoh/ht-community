@@ -65,7 +65,8 @@ backend/src/
 - PostgreSQL 15+
 - Redis 7+
 - OpenAI API key
-- Expo CLI (for mobile development)
+- Expo CLI (`npm install -g expo-cli`)
+- EAS CLI (`npm install -g eas-cli`) for development builds
 
 ### Environment Setup
 
@@ -127,15 +128,23 @@ aws ecs update-service --cluster healing-temple --service backend --force-new-de
 ### Running on Device/Simulator
 
 ```bash
-# iOS Simulator
-npm run ios
+# Development server (for Expo Go or dev builds)
+npm start
 
-# Android Emulator
-npm run android
+# iOS Simulator (requires development build)
+npx expo run:ios
 
-# Physical device (Expo Go)
+# Android Emulator (requires development build)
+npx expo run:android
+
+# Physical device with Expo Go
 npm start
 # Scan QR code with Expo Go app
+# Note: Touch events may not work properly with SDK 54 in Expo Go
+
+# Recommended: Use development build
+eas build --platform ios --profile development
+eas build --platform android --profile development
 ```
 
 ### Building for Production
