@@ -1,0 +1,483 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  phone             String?
+  passwordHash      String    @map("password_hash")
+  firstName         String    @map("first_name")
+  lastName          String    @map("last_name")
+  profileImageUrl   String?   @map("profile_image_url")
+  memberTier        MemberTier @default(BASIC) @map("member_tier")
+  role              UserRole   @default(MEMBER)
+  qrCode            String?    @unique @map("qr_code")
+  qrCodeExpiresAt   DateTime?  @map("qr_code_expires_at")
+  isActive          Boolean    @default(true) @map("is_active")
+  emailVerified     Boolean    @default(false) @map("email_verified")
+  phoneVerified     Boolean    @default(false) @map("phone_verified")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  sessions              UserSession[]
+  checkins              Checkin[]
+  posts                 Post[]
+  postReactions         PostReaction[]
+  postComments          PostComment[]
+  conversationsCreated  Conversation[] @relation("ConversationCreator")
+  conversationParticipants ConversationParticipant[]
+  messagesSent          Message[]
+  messageReadStatus     MessageReadStatus[]
+  creditSubmissions     CreditSubmission[]
+  storeCredits          StoreCredit[]
+  notifications         Notification[]
+  userPreferences       UserPreference[]
+  activityLogs          ActivityLog[]
+  postsApproved         Post[] @relation("PostApprover")
+  creditsReviewed       CreditSubmission[] @relation("CreditReviewer")
+  whiteboardRoomsCreated WhiteboardRoom[] @relation("RoomCreator")
+  whiteboardParticipants WhiteboardParticipant[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  tokenHash   String    @map("token_hash")
+  deviceInfo  Json?     @map("device_info")
+  ipAddress   String?   @map("ip_address")
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model Checkin {
+  id               String        @id @default(uuid())
+  userId           String        @map("user_id")
+  checkinMethod    CheckinMethod @map("checkin_method")
+  locationVerified Boolean       @default(false) @map("location_verified")
+  latitude         Decimal?      @db.Decimal(10, 8)
+  longitude        Decimal?      @db.Decimal(11, 8)
+  notes            String?
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("checkins")
+}
+
+model Post {
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
+  content        String
+  postType       PostType        @default(TEXT) @map("post_type")
+  mediaUrls      Json?           @map("media_urls")
+  metadata       Json?
+  isPinned       Boolean         @default(false) @map("is_pinned")
+  isApproved     Boolean         @default(false) @map("is_approved")
+  approvalStatus ApprovalStatus  @default(PENDING) @map("approval_status")
+  approvedBy     String?         @map("approved_by")
+  approvedAt     DateTime?       @map("approved_at")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver     User?          @relation("PostApprover", fields: [approvedBy], references: [id])
+  reactions    PostReaction[]
+  comments     PostComment[]
+
+  @@map("posts")
+}
+
+model PostReaction {
+  id           String       @id @default(uuid())
+  postId       String       @map("post_id")
+  userId       String       @map("user_id")
+  reactionType ReactionType @map("reaction_type")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, reactionType])
+  @@map("post_reactions")
+}
+
+model PostComment {
+  id              String    @id @default(uuid())
+  postId          String    @map("post_id")
+  userId          String    @map("user_id")
+  parentCommentId String?   @map("parent_comment_id")
+  content         String
+  isApproved      Boolean   @default(true) @map("is_approved")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentComment PostComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies       PostComment[] @relation("CommentReplies")
+
+  @@map("post_comments")
+}
+
+model Conversation {
+  id               String             @id @default(uuid())
+  conversationType ConversationType   @map("conversation_type")
+  name             String?
+  description      String?
+  createdBy        String             @map("created_by")
+  isActive         Boolean            @default(true) @map("is_active")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  creator      User                      @relation("ConversationCreator", fields: [createdBy], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String                  @id @default(uuid())
+  conversationId String                  @map("conversation_id")
+  userId         String                  @map("user_id")
+  role           ConversationRole        @default(MEMBER)
+  joinedAt       DateTime                @default(now()) @map("joined_at")
+  leftAt         DateTime?               @map("left_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id               String      @id @default(uuid())
+  conversationId   String      @map("conversation_id")
+  senderId         String      @map("sender_id")
+  messageType      MessageType @default(TEXT) @map("message_type")
+  content          String?
+  mediaUrl         String?     @map("media_url")
+  replyToMessageId String?     @map("reply_to_message_id")
+  isEdited         Boolean     @default(false) @map("is_edited")
+  isDeleted        Boolean     @default(false) @map("is_deleted")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  conversation     Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender           User                @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyToMessage   Message?            @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: Cascade)
+  replies          Message[]           @relation("MessageReplies")
+  readStatus       MessageReadStatus[]
+
+  @@map("messages")
+}
+
+model MessageReadStatus {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  readAt    DateTime @default(now()) @map("read_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("message_read_status")
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  sku         String?     @unique
+  price       Decimal?    @db.Decimal(10, 2)
+  category    String?
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  saleItems SaleItem[]
+
+  @@map("products")
+}
+
+model Sale {
+  id              String   @id @default(uuid())
+  transactionId   String?  @unique @map("transaction_id")
+  totalAmount     Decimal  @db.Decimal(10, 2) @map("total_amount")
+  customerEmail   String?  @map("customer_email")
+  customerPhone   String?  @map("customer_phone")
+  saleTimestamp   DateTime @map("sale_timestamp")
+  posData         Json?    @map("pos_data")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  saleItems         SaleItem[]
+  creditSubmissions CreditSubmission[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String  @id @default(uuid())
+  saleId    String  @map("sale_id")
+  productId String? @map("product_id")
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2) @map("unit_price")
+  lineTotal Decimal @db.Decimal(10, 2) @map("line_total")
+
+  sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model CreditSubmission {
+  id              String               @id @default(uuid())
+  userId          String               @map("user_id")
+  saleId          String?              @map("sale_id")
+  rawInput        String               @map("raw_input")
+  processedData   Json?                @map("processed_data")
+  assistanceType  String?              @map("assistance_type")
+  confidenceScore Decimal?             @db.Decimal(3, 2) @map("confidence_score")
+  claimedAmount   Decimal?             @db.Decimal(8, 2) @map("claimed_amount")
+  approvedAmount  Decimal?             @db.Decimal(8, 2) @map("approved_amount")
+  status          CreditSubmissionStatus @default(PENDING)
+  reviewedBy      String?              @map("reviewed_by")
+  reviewNotes     String?              @map("review_notes")
+  submittedAt     DateTime             @default(now()) @map("submitted_at")
+  reviewedAt      DateTime?            @map("reviewed_at")
+  createdAt       DateTime             @default(now()) @map("created_at")
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sale       Sale?         @relation(fields: [saleId], references: [id])
+  reviewer   User?         @relation("CreditReviewer", fields: [reviewedBy], references: [id])
+  storeCredit StoreCredit?
+
+  @@map("credit_submissions")
+}
+
+model StoreCredit {
+  id                   String   @id @default(uuid())
+  userId               String   @map("user_id")
+  creditSubmissionId   String?  @unique @map("credit_submission_id")
+  amount               Decimal  @db.Decimal(8, 2)
+  creditType           String   @map("credit_type")
+  description          String?
+  expiresAt            DateTime? @map("expires_at")
+  isRedeemed           Boolean  @default(false) @map("is_redeemed")
+  redeemedAt           DateTime? @map("redeemed_at")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditSubmission CreditSubmission? @relation(fields: [creditSubmissionId], references: [id])
+
+  @@map("store_credits")
+}
+
+model Notification {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  notificationType String    @map("notification_type")
+  title            String
+  message          String
+  data             Json?
+  isRead           Boolean   @default(false) @map("is_read")
+  isSent           Boolean   @default(false) @map("is_sent")
+  scheduledFor     DateTime? @map("scheduled_for")
+  sentAt           DateTime? @map("sent_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model UserPreference {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  preferenceKey   String   @map("preference_key")
+  preferenceValue Json     @map("preference_value")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, preferenceKey])
+  @@map("user_preferences")
+}
+
+model ActivityLog {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  action       String
+  resourceType String?  @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json?
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
+
+// Enums
+enum MemberTier {
+  BASIC
+  PREMIUM
+  VIP
+
+  @@map("member_tier")
+}
+
+enum UserRole {
+  MEMBER
+  STAFF
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum CheckinMethod {
+  QR_CODE
+  GEOFENCE
+  MANUAL
+
+  @@map("checkin_method")
+}
+
+enum PostType {
+  TEXT
+  IMAGE
+  VIDEO
+  POLL
+  EVENT
+
+  @@map("post_type")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("approval_status")
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  LAUGH
+  WOW
+  SAD
+  ANGRY
+
+  @@map("reaction_type")
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+
+  @@map("conversation_type")
+}
+
+enum ConversationRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+
+  @@map("conversation_role")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+
+  @@map("message_type")
+}
+
+enum CreditSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  UNDER_REVIEW
+
+  @@map("credit_submission_status")
+}
+
+model WhiteboardRoom {
+  id            String              @id @default(uuid())
+  name          String
+  description   String?
+  roomType      WhiteboardRoomType  @map("room_type")
+  inviteCode    String?             @unique @map("invite_code")
+  isPublic      Boolean             @default(false) @map("is_public")
+  maxParticipants Int?              @map("max_participants")
+  createdBy     String              @map("created_by")
+  isActive      Boolean             @default(true) @map("is_active")
+  expiresAt     DateTime?           @map("expires_at")
+  tldrawData    Json?               @map("tldraw_data")
+  lastActivity  DateTime?           @map("last_activity")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  creator       User                    @relation("RoomCreator", fields: [createdBy], references: [id])
+  participants  WhiteboardParticipant[]
+
+  @@map("whiteboard_rooms")
+}
+
+model WhiteboardParticipant {
+  id            String              @id @default(uuid())
+  roomId        String              @map("room_id")
+  userId        String              @map("user_id")
+  role          WhiteboardRole      @default(PARTICIPANT)
+  joinedAt      DateTime            @default(now()) @map("joined_at")
+  lastActive    DateTime?           @map("last_active")
+  leftAt        DateTime?           @map("left_at")
+
+  room          WhiteboardRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@map("whiteboard_participants")
+}
+
+// Enums for Whiteboard
+enum WhiteboardRoomType {
+  OPEN_BOARD
+  INVITE_ROOM
+  MEMBER_ROOM
+
+  @@map("whiteboard_room_type")
+}
+
+enum WhiteboardRole {
+  OWNER
+  MODERATOR
+  PARTICIPANT
+
+  @@map("whiteboard_role")
+}

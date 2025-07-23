@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "The Healing Temple",
+    "slug": "healing-temple-community",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#8B5A83"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.healingtemple.community",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to scan QR codes for check-ins and take photos for posts.",
+        "NSLocationWhenInUseUsageDescription": "This app uses location to verify check-ins at The Healing Temple.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record voice messages."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#8B5A83"
+      },
+      "package": "com.healingtemple.community",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {},
+    "sdkVersion": "54.0.0",
+    "plugins": [
+      "expo-location"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}

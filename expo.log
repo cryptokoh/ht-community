@@ -1,0 +1,12 @@
+
+> healing-temple-community@1.0.0 start
+> expo start
+
+Starting project at /home/koh/Documents/HealingTemple/communityapp
+Starting Metro Bundler
+The following packages should be updated for best compatibility with the installed expo version:
+  @types/react@18.2.79 - expected version: ~19.0.10
+  eslint-config-expo@7.1.2 - expected version: ~9.2.0
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8081
+Logs for your project will appear below.
