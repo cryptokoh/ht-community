@@ -2,6 +2,7 @@
   "expo": {
     "name": "The Healing Temple",
     "slug": "healing-temple-community",
+    "scheme": "healing-temple",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -40,7 +41,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "healing-temple-community"
       }
     }
   }

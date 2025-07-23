@@ -28,6 +28,7 @@
     "expo": "54.0.0-canary-20250722-599a28f",
     "expo-barcode-scanner": "~12.5.3",
     "expo-camera": "16.1.12-canary-20250722-599a28f",
+    "expo-dev-client": "^5.1.9-canary-20250722-599a28f",
     "expo-image-picker": "~16.1.4",
     "expo-location": "~18.1.6",
     "expo-notifications": "~0.31.4",
@@ -46,8 +47,7 @@
     "react-native-webview": "13.13.5",
     "react-redux": "^8.1.3",
     "redux-persist": "^6.0.0",
-    "socket.io-client": "^4.7.4",
-    "expo-dev-client": "5.1.9-canary-20250722-599a28f"
+    "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
