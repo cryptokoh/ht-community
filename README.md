@@ -68,6 +68,30 @@ backend/src/
 - Expo CLI (`npm install -g expo-cli`)
 - EAS CLI (`npm install -g eas-cli`) for development builds
 
+### ⚠️ Important: Expo SDK 54 Canary Version
+
+This project uses **Expo SDK 54.0.0-canary** to resolve touch event issues that occur with SDK 53+ in Expo Go. Please be aware of the following:
+
+#### Canary Version Risks
+- **Stability**: Canary versions are pre-release and may contain bugs or breaking changes
+- **Documentation**: SDK 54 documentation may be incomplete or subject to change
+- **Dependencies**: Some third-party packages may not yet be compatible with SDK 54
+- **Support**: Limited community support and fewer tested solutions
+
+#### Migration Plan
+1. **Current State**: Using SDK 54 canary for touch event functionality
+2. **Short-term**: Monitor SDK 54 release notes and test stable release when available
+3. **Migration Timeline**: 
+   - Test SDK 54 stable release immediately upon availability
+   - Run full regression testing on all features
+   - Update dependencies to stable versions
+   - Document any breaking changes or required code modifications
+
+#### Development Build Requirement
+- **Touch events require development builds** - Expo Go has known issues with touch handling in SDK 53+
+- Create development builds using: `eas build --platform [ios/android] --profile development`
+- Install the development build on your device/simulator for proper touch event handling
+
 ### Environment Setup
 
 1. **Clone the repository**

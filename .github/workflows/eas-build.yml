@@ -26,18 +26,77 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
       
-      - uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: 18
           
-      - uses: expo/expo-github-action@v8
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+            
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
           
-      - run: npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+        
+      - name: Run tests
+        run: npm test -- --passWithNoTests
+        continue-on-error: true
+        
+      - name: Run linting
+        run: npm run lint
+        continue-on-error: true
+        
+      - name: Run type checking
+        run: npm run type-check
+        continue-on-error: true
       
-      - run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive
+      - name: Build with EAS
+        id: eas-build
+        run: |
+          set -e
+          echo "Starting EAS build for platform: ${{ inputs.platform }}, profile: ${{ inputs.profile }}"
+          eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive
+        
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { platform, profile } = context.payload.inputs;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            
+            // Create an issue on build failure
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `EAS Build Failed: ${platform} - ${profile}`,
+              body: `## Build Failure Details\n\n` +
+                    `- **Platform**: ${platform}\n` +
+                    `- **Profile**: ${profile}\n` +
+                    `- **Workflow Run**: [View Logs](${runUrl})\n` +
+                    `- **Time**: ${new Date().toISOString()}\n\n` +
+                    `Please check the logs for more details.`,
+              labels: ['build-failure', 'eas']
+            });
+            
+      - name: Post build summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Platform: ${{ inputs.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Profile: ${{ inputs.profile }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
